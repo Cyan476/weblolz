@@ -1,0 +1,15 @@
+---
+// src/components/Navigation.astro
+const links = [
+    { name: 'HOME', url: '/' },
+    { name: 'MUZIK', url: '/muzik' },
+    { name: 'NOTEZ', url: '/notez' }
+];
+---
+<nav>
+    {links.map(link => (
+        <a href={link.url} style="margin: 0 1rem; color: #33ff33; text-decoration: none;">
+            {link.name}
+        </a>
+    ))}
+</nav>

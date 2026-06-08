@@ -1,0 +1,50 @@
+:root {
+  --z-green: #33ff33;
+  --z-magenta: #ff00ff;
+  --z-bg: #0d0d0d;
+}
+
+body {
+  background-color: var(--z-bg);
+  color: var(--z-green);
+  font-family: "Comic Sans MS", "Comic Sans", cursive;
+  cursor: crosshair;
+  padding: 2rem;
+  /* Make the background look like a flickering screen */
+  background-image: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                    linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+  background-size: 100% 4px, 3px 100%;
+}
+
+/* The Zombiez "Z" effect for all headers */
+h1, h2, h3 {
+  text-transform: uppercase;
+  border: 4px dashed var(--z-magenta);
+  padding: 10px;
+  width: fit-content;
+  text-shadow: 2px 2px #000;
+}
+
+/* Make links look like broken UI buttons */
+a {
+  color: var(--z-magenta);
+  font-weight: bold;
+  text-decoration: none;
+  border: 2px solid var(--z-green);
+  padding: 5px;
+}
+
+a:hover {
+  background: var(--z-green);
+  color: #000;
+}
+
+@font-face {
+  font-family: 'Comic Sans Forced';
+  src: url('/fonts/comicsans.ttf') format('truetype');
+  font-display: swap;
+}
+
+* {
+  font-family: 'Comic Sans Forced', 'Comic Sans MS', 'Comic Sans', cursive !important;
+}

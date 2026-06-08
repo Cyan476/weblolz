@@ -1,0 +1,280 @@
+---
+---
+<div class="muzik-player">
+    <audio id="audio-element"></audio>
+    
+    <h3 id="track-title">LOADING...</h3>
+    <div id="track-creator" class="track-creator">BY: ...</div>
+    
+    <div class="time-display">
+        <span id="current-time">0:00</span> / <span id="total-time">0:00</span>
+    </div>
+    
+    <div class="controls">
+        <button id="shuffle-btn">SUFFL: OFF</button>
+        <button id="prev-btn">PRE</button>
+        <button id="play-pause-btn">PLEY</button>
+        <button id="next-btn">NEX</button>
+    </div>
+    
+    <div class="volume-controls">
+        <span>VOL:</span>
+        <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="1">
+    </div>
+
+    <div class="visualizer-container">
+        <canvas id="visualizer"></canvas>
+    </div>
+
+    <div class="seek-container">
+        <input type="range" id="seek-slider" min="0" max="100" value="0">
+    </div>
+
+    <div class="playlist-info">
+        Track <span id="current-track-num">1</span> of <span id="total-tracks-num">1</span>
+    </div>
+
+    <div class="playlist-container"><ul id="playlist-list"></ul></div>
+</div>
+
+<script>
+    const tracks = [
+        { title: "ZTEREO MADNEZZ", creator: "FOREVERBOUND", src: "/songs/Stereo-Madness.mp3" },
+        { title: "BAKK ON TRAKK", creator: "DJVI", src: "/songs/Back-On-Track.mp3" },
+        { title: "POLERGEIZ", creator: "STEP", src: "/songs/Polargeist.mp3" },
+        { title: "DRY OWT", creator: "DJVI", src: "/songs/Dry-Out.mp3" },
+        { title: "BAZE AFTER BAZE", creator: "DJVI", src: "/songs/Base-After-Base.mp3" },
+        { title: "KANT LET GO", creator: "DJVI", src: "/songs/Cant-Let-Go.mp3" },
+        { title: "JUMPER", creator: "WATERFLAME", src: "/songs/Jumper.mp3" },
+        { title: "TIME MAHINE", creator: "WATERFLAME", src: "/songs/Time-Machine.mp3" },
+        { title: "KYKLEZ", creator: "DJVI", src: "/songs/Cycles.mp3" },
+        { title: "X-ZTEP", creator: "DJVI", src: "/songs/xStep.mp3" },
+        { title: "KLUTTERFUNK", creator: "WATERFLAME", src: "/songs/Clutterfunk.mp3" },
+        { title: "THEORY OF EVERYTHING", creator: "DJ-NATE", src: "/songs/Theory-of-Everything.mp3" },
+        { title: "ELEKTROMAN ADVENTUREZ", creator: "WATERFLAME", src: "/songs/Electroman-Adventures.mp3" },
+        { title: "KLUBZTEP", creator: "DJ-NATE", src: "/songs/Clubstep.mp3" },
+        { title: "ELEKTRODYNAMIX", creator: "DJ-NATE", src: "/songs/Electrodynamix.mp3" },
+        { title: "HEXAGON FORKE", creator: "WATERFLAME", src: "/songs/Hexagon-Force.mp3" },
+        { title: "BLAST PROKEZZING", creator: "WATERFLAME", src: "/songs/Blast-Processing.mp3" },
+        { title: "THEORY OF EVERYTHING 2", creator: "DJ-NATE", src: "/songs/Theory-of-Everything-2.mp3" },
+        { title: "GEOMETRIKAL DOMINATOR", creator: "WATERFLAME", src: "/songs/Geometrical-Dominator.mp3" },
+        { title: "DEADLOKKED", creator: "F-777", src: "/songs/Deadlocked.mp3" },
+        { title: "FINGERDASH", creator: "MDK", src: "/songs/Fingerdash.mp3" },
+        { title: "DASH", creator: "MDK", src: "/songs/Dash.mp3" }
+    ];
+    
+    let currentTrackIndex = 0;
+    let isShuffle = false;
+
+    const audio = document.getElementById('audio-element') as HTMLAudioElement;
+    const playPauseBtn = document.getElementById('play-pause-btn') as HTMLButtonElement;
+    const prevBtn = document.getElementById('prev-btn') as HTMLButtonElement;
+    const nextBtn = document.getElementById('next-btn') as HTMLButtonElement;
+    const shuffleBtn = document.getElementById('shuffle-btn') as HTMLButtonElement;
+    const volumeSlider = document.getElementById('volume-slider') as HTMLInputElement;
+    const seekSlider = document.getElementById('seek-slider') as HTMLInputElement;
+    const canvas = document.getElementById('visualizer') as HTMLCanvasElement;
+    const trackTitle = document.getElementById('track-title') as HTMLElement;
+    const trackCreator = document.getElementById('track-creator') as HTMLElement;
+    const playlistList = document.getElementById('playlist-list') as HTMLElement;
+    const currentTimeDisplay = document.getElementById('current-time') as HTMLElement;
+    const totalTimeDisplay = document.getElementById('total-time') as HTMLElement;
+    const currentTrackNum = document.getElementById('current-track-num') as HTMLElement;
+    const totalTracksNum = document.getElementById('total-tracks-num') as HTMLElement;
+
+    totalTracksNum.textContent = tracks.length.toString();
+
+    // Updated Visualizer Logic
+    let audioCtx: any;
+    let analyser: any;
+    let dataArray: any;
+
+    const initVisualizer = () => {
+        if (audioCtx) return; // Only init once
+        
+        // Set size properly
+        canvas.width = canvas.clientWidth;
+        canvas.height = canvas.clientHeight;
+        
+        audioCtx = new ((window as any).AudioContext || (window as any).webkitAudioContext)();
+        const source = audioCtx.createMediaElementSource(audio);
+        analyser = audioCtx.createAnalyser();
+        
+        source.connect(analyser);
+        analyser.connect(audioCtx.destination);
+        
+        analyser.fftSize = 64;
+        dataArray = new Uint8Array(analyser.frequencyBinCount);
+        
+        draw();
+    };
+
+    const draw = () => {
+        requestAnimationFrame(draw);
+        
+        // Get the context inside the draw loop to ensure it's always fresh
+        const ctx = canvas.getContext('2d');
+        if (!analyser || !ctx || !dataArray) return;
+        
+        analyser.getByteFrequencyData(dataArray);
+        
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        const barWidth = (canvas.width / dataArray.length) * 2;
+        let x = 0;
+        
+        for (let i = 0; i < dataArray.length; i++) {
+            // Use a multiplier to make bars more visible if the volume is low
+            const barHeight = (dataArray[i] / 255) * canvas.height;
+            ctx.fillStyle = i % 2 === 0 ? '#ff00ff' : '#33ff33';
+            ctx.fillRect(x, canvas.height - barHeight, barWidth - 1, barHeight);
+            x += barWidth;
+        }
+    };
+
+    // Helper to format seconds into M:SS
+    const formatTime = (time: number) => {
+        if (isNaN(time)) return "0:00";
+        const mins = Math.floor(time / 60);
+        const secs = Math.floor(time % 60);
+        return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+    };
+
+    const loadTrack = (index: number) => {
+        const track = tracks[index];
+        audio.src = track.src;
+        trackTitle.textContent = track.title;
+        trackCreator.textContent = `BY: ${track.creator}`;
+        currentTrackNum.textContent = (index + 1).toString();
+        
+        // Reset UI
+        seekSlider.value = "0";
+        currentTimeDisplay.textContent = "0:00";
+        updatePlaylistUI(index);
+    };
+
+    const playTrack = () => {
+        initVisualizer();
+        audio.play();
+        playPauseBtn.textContent = "PAUZE";
+    };
+
+    const nextTrack = () => {
+        if (isShuffle && tracks.length > 1) {
+            let nextIndex;
+            do {
+                nextIndex = Math.floor(Math.random() * tracks.length);
+            } while (nextIndex === currentTrackIndex);
+            currentTrackIndex = nextIndex;
+        } else {
+            currentTrackIndex = (currentTrackIndex + 1) % tracks.length;
+        }
+        loadTrack(currentTrackIndex);
+        playTrack();
+    };
+
+    const prevTrack = () => {
+        currentTrackIndex = (currentTrackIndex - 1 + tracks.length) % tracks.length;
+        loadTrack(currentTrackIndex);
+        playTrack();
+    };
+
+    // Update total time once metadata is loaded
+    audio.addEventListener('loadedmetadata', () => {
+        totalTimeDisplay.textContent = formatTime(audio.duration);
+    });
+
+    // Toggle Play/Pause
+    playPauseBtn.addEventListener('click', () => {
+        if (audio.paused) {
+            playTrack();
+        } else {
+            audio.pause();
+            playPauseBtn.textContent = "PLEY";
+        }
+    });
+
+    nextBtn.addEventListener('click', nextTrack);
+    prevBtn.addEventListener('click', prevTrack);
+    
+    shuffleBtn.addEventListener('click', () => {
+        isShuffle = !isShuffle;
+        shuffleBtn.textContent = `SUFFL: ${isShuffle ? 'ON' : 'OFF'}`;
+        shuffleBtn.classList.toggle('active', isShuffle);
+    });
+
+    volumeSlider.addEventListener('input', () => {
+        audio.volume = parseFloat(volumeSlider.value);
+    });
+
+    // Seek Slider
+    seekSlider.addEventListener('input', () => {
+        audio.currentTime = (parseFloat(seekSlider.value) / 100) * audio.duration;
+    });
+
+    // Auto-play next song
+    audio.addEventListener('ended', () => {
+        nextTrack();
+    });
+
+    // Update Seek Slider AND Time Display
+    audio.addEventListener('timeupdate', () => {
+        const percentage = audio.duration ? (audio.currentTime / audio.duration) * 100 : 0;
+        seekSlider.value = percentage.toString();
+        currentTimeDisplay.textContent = formatTime(audio.currentTime);
+    });
+
+    // Playlist Generation
+    tracks.forEach((track, index) => {
+        const li = document.createElement('li');
+        li.textContent = `${track.title} - ${track.creator}`;
+        li.addEventListener('click', () => {
+            currentTrackIndex = index;
+            loadTrack(index);
+            playTrack();
+        });
+        playlistList.appendChild(li);
+    });
+
+    const updatePlaylistUI = (index: number) => {
+        playlistList.querySelectorAll('li').forEach((li, i) => {
+            li.className = i === index ? 'active' : '';
+        });
+    };
+
+    // Initial load
+    loadTrack(currentTrackIndex);
+</script>
+
+<style>
+    .muzik-player { padding: 20px; border: 4px solid var(--z-magenta, #ff00ff); text-align: center; font-family: 'Comic Relief', cursive; background: #000; color: var(--z-green, #33ff33); }
+    .visualizer-container { width: 100%; height: 60px; background: #000; border: 2px solid var(--z-green, #33ff33); margin: 10px 0; position: relative; }
+    #visualizer { width: 100%; height: 100%; display: block; }
+    .seek-container { margin: 15px 0; }
+    #seek-slider { width: 100%; cursor: pointer; accent-color: var(--z-magenta); }
+    .controls { display: flex; justify-content: center; gap: 10px; margin: 10px 0; flex-wrap: wrap; }
+    button { font-family: inherit; font-size: 1rem; cursor: pointer; background: #000; color: var(--z-magenta, #ff00ff); border: 2px solid var(--z-magenta, #ff00ff); padding: 5px 15px; text-transform: uppercase; font-weight: bold; }
+    button:hover { background: var(--z-magenta, #ff00ff); color: #000; }
+    button.active { background: var(--z-green, #33ff33); color: #000; border-color: var(--z-green, #33ff33); }
+    .volume-controls { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 10px 0; font-weight: bold; }
+    input[type="range"] { cursor: pointer; accent-color: var(--z-green, #33ff33); }
+    .playlist-info { font-size: 0.9rem; margin-top: 10px; opacity: 0.8; }
+    .playlist-container { margin-top: 20px; max-height: 150px; overflow-y: auto; border: 2px solid var(--z-magenta); background: #050505; text-align: left; }
+    #playlist-list { list-style: none; padding: 0; margin: 0; }
+    #playlist-list li { padding: 8px; border-bottom: 1px solid #1a1a1a; cursor: pointer; font-size: 0.8rem; text-transform: uppercase; }
+    #playlist-list li:hover { background: #111; color: var(--z-magenta); }
+    #playlist-list li.active { background: var(--z-green); color: #000; font-weight: bold; }
+    
+    .track-creator { font-weight: bold; margin-bottom: 10px; color: var(--z-green); text-transform: uppercase; }
+    
+    h3#track-title { 
+        color: var(--z-magenta); 
+        border: none; 
+        width: 100%; 
+        margin: 0 0 15px 0;
+        padding: 0;
+        text-shadow: 2px 2px #000;
+        /* Overriding global scaling for better layout inside player */
+        font-size: clamp(1.2rem, 5vw, 2rem) !important; 
+    }
+</style>
