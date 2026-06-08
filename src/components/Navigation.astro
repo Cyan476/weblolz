@@ -3,13 +3,30 @@
 const links = [
     { name: 'HOME', url: '/' },
     { name: 'MUZIK', url: '/muzik' },
-    { name: 'NOTEZ', url: '/notez' }
+    { name: 'POZTZ', url: '/poztz' },
+    { name: 'PORJEKTS', url: '/porjekts' }
 ];
 ---
 <nav>
-    {links.map(link => (
-        <a href={link.url} style="margin: 0 1rem; color: #33ff33; text-decoration: none;">
-            {link.name}
-        </a>
-    ))}
+    <div class="nav-links">
+        {links.map(link => (
+            <a href={link.url}>
+                {link.name}
+            </a>
+        ))}
+    </div>
+    <div class="nav-bar"></div>
 </nav>
+
+<style>
+    .nav-links {
+        display: flex;
+        justify-content: center;
+        gap: 1.5rem;
+        margin-bottom: 1rem;
+    }
+    .nav-bar {
+        border-bottom: 4px dashed var(--z-magenta);
+        margin-bottom: 2rem;
+    }
+</style>
